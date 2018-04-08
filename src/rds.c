@@ -34,6 +34,7 @@ struct {
     int ta;
     char ps[PS_LENGTH];
     char rt[RT_LENGTH];
+	int ecc;
 } rds_params = { 0 };
 /* Here, the first member of the struct must be a scalar to avoid a
    warning on -Wmissing-braces with GCC < 4.8.3 
@@ -132,16 +133,23 @@ void get_rds_group(int *buffer) {
             blocks[3] = rds_params.ps[ps_state*2]<<8 | rds_params.ps[ps_state*2+1];
             ps_state++;
             if(ps_state >= 4) ps_state = 0;
-        } else { // state == 5
+        } else if (state<6) { // state == 4,5
             blocks[1] = 0x2400 | rt_state;
             blocks[2] = rds_params.rt[rt_state*4+0]<<8 | rds_params.rt[rt_state*4+1];
             blocks[3] = rds_params.rt[rt_state*4+2]<<8 | rds_params.rt[rt_state*4+3];
             rt_state++;
             if(rt_state >= 16) rt_state = 0;
-        }
-    
+        } else if(state <7) { // Type 1A groups
+            blocks[1] = 0x1400;
+            blocks[2] = 0x0000 | rds_params.ecc;
+            blocks[3] = 0x0000;
+        } else { //Type 1B Groups
+            blocks[1] = 0x1c00;
+            blocks[2] = 0x0000 | rds_params.pi;
+            blocks[3] = 0x0000;
+    		}
         state++;
-        if(state >= 5) state = 0;
+        if(state >= 8) state = 0;
     }
     
     // Calculate the checkword for each block and emit the bits
@@ -252,4 +260,8 @@ void set_rds_ps(char *ps) {
 
 void set_rds_ta(int ta) {
     rds_params.ta = ta;
+}
+
+void set_rds_ecc(int ecc) {
+    rds_params.ecc = ecc;
 }
